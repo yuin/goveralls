@@ -20,6 +20,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +47,7 @@ var (
 	extraFlags Flags
 	pkg        = flag.String("package", "", "Go package")
 	verbose    = flag.Bool("v", false, "Pass '-v' argument to 'go test' and output to stdout")
+	vetoff     = flag.Bool("vetoff", false, "disable go vet")
 	race       = flag.Bool("race", false, "Pass '-race' argument to 'go test'")
 	debug      = flag.Bool("debug", false, "Enable debug output")
 	coverprof  = flag.String("coverprofile", "", "If supplied, use a go cover profile (comma separated)")
@@ -145,6 +148,14 @@ func getCoverage() ([]*SourceFile, error) {
 		}
 		if *race {
 			args = append(args, "-race")
+		}
+		if *vetoff {
+			re := regexp.MustCompile("go(\\d+)\\.(\\d+)(\\.\\d+)?")
+			major, _ := strconv.ParseInt(re.ReplaceAllString(runtime.Version(), "$1"), 10, 32)
+			minor, _ := strconv.ParseInt(re.ReplaceAllString(runtime.Version(), "$2"), 10, 32)
+			if major > 1 || major == 1 && minor > 9 {
+				args = append(args, "-vet=off")
+			}
 		}
 		args = append(args, extraFlags...)
 		args = append(args, line)
